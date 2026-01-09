@@ -1,0 +1,154 @@
+/*
+ * 主題: 智慧型自動販賣機模擬系統
+ * 系級: 電機一乙
+ * 學號: 11428205
+ * 姓名: 游郁晨
+ */
+
+#include <iostream>
+#include <vector>
+#include <string>
+#include <conio.h>  // [新增] 為了使用 _getch()
+#include "rlutil.h"
+
+using namespace std;
+
+struct Product {
+    string name;
+    int price;
+    int stock;
+    int color; 
+};
+
+int balance = 0;       
+int selectedItem = 0;  
+
+vector<Product> products = {
+    {"Hot Coffee", 30, 5, rlutil::RED},
+    {"Iced Tea  ", 25, 5, rlutil::BLUE},
+    {"Hot Milk  ", 35, 3, rlutil::RED},
+    {"Cola      ", 20, 0, rlutil::BLUE}, 
+    {"Water     ", 15, 10, rlutil::BLUE},
+    {"Hot Cocoa ", 40, 2, rlutil::RED}
+};
+
+void drawUI() {
+    rlutil::cls(); 
+    rlutil::hidecursor(); 
+
+    rlutil::locate(1, 1);
+    rlutil::setColor(rlutil::YELLOW);
+    cout << "=== SMART VENDING MACHINE SYSTEM ===" << endl;
+    rlutil::setColor(rlutil::GREY); 
+    cout << "Use UP/DOWN to select, ENTER to buy, 'I' to insert $10, ESC to exit." << endl;
+    cout << "------------------------------------------------------------" << endl;
+
+    for (size_t i = 0; i < products.size(); ++i) {
+        rlutil::locate(3, 4 + i); 
+
+        if (i == selectedItem) {
+            rlutil::setColor(rlutil::WHITE);
+            cout << " > ";
+        } else {
+            cout << "   ";
+        }
+
+        if (products[i].stock == 0) {
+            rlutil::setColor(rlutil::GREY);
+        } else {
+            rlutil::setColor(products[i].color);
+        }
+
+        cout << products[i].name 
+             << "  $" << products[i].price 
+             << "  (Stock: " << products[i].stock << ")";
+        
+        if (products[i].stock == 0) {
+            cout << " [SOLD OUT]";
+        }
+    }
+
+    rlutil::locate(1, 15);
+    rlutil::setColor(rlutil::WHITE);
+    cout << "------------------------------------------------------------" << endl;
+    rlutil::locate(3, 16);
+    cout << "Current Balance: $ " << balance << "   ";
+}
+
+void showMessage(string msg, int color) {
+    rlutil::locate(3, 18);
+    cout << "                                                  "; 
+    rlutil::locate(3, 18);
+    rlutil::setColor(color);
+    cout << "Message: " << msg;
+    rlutil::setColor(rlutil::WHITE); 
+}
+
+int main() {
+    rlutil::saveDefaultColor(); 
+
+    while (true) {
+        drawUI(); 
+
+        // [修改] 這裡改成使用 _getch()
+        int key = _getch(); 
+        
+        // 如果是特殊按鍵(如方向鍵)，_getch 會回傳兩次值，第一次通常是 224
+        if (key == 224) {
+            key = _getch(); // 再讀一次取得真實鍵碼
+            switch (key) {
+                case 72: // 上 (KEY_UP 的鍵碼)
+                    if (selectedItem > 0) {
+                        selectedItem--;
+                        showMessage("", rlutil::WHITE);
+                    }
+                    break;
+                case 80: // 下 (KEY_DOWN 的鍵碼)
+                    if (selectedItem < products.size() - 1) {
+                        selectedItem++;
+                        showMessage("", rlutil::WHITE);
+                    }
+                    break;
+            }
+        } else {
+            // 一般按鍵
+            switch (key) {
+                case 27: // ESC 鍵碼
+                    rlutil::cls();
+                    rlutil::resetColor();
+                    rlutil::showcursor();
+                    cout << "Exiting system. Thank you!" << endl;
+                    return 0;
+
+                case 'i': 
+                case 'I': 
+                    balance += 10;
+                    showMessage("Inserted $10.", rlutil::GREEN);
+                    break;
+
+                case 13: // Enter 鍵碼
+                    Product &p = products[selectedItem]; 
+
+                    if (p.stock <= 0) {
+                        showMessage("Error: Item is sold out!", rlutil::RED);
+                    } else if (balance < p.price) {
+                        showMessage("Error: Insufficient funds!", rlutil::RED);
+                    } else {
+                        balance -= p.price;
+                        p.stock--;
+                        string msg = "Purchased " + p.name + "! Change: $" + to_string(balance);
+                        showMessage(msg, rlutil::LIGHTGREEN);
+                        
+                        rlutil::msleep(200);
+                        rlutil::locate(3, 4 + selectedItem);
+                        rlutil::setColor(rlutil::WHITE);
+                        cout << "   " << p.name << " (Purchased!)    ";
+                        rlutil::msleep(500);
+                    }
+                    break;
+            }
+        }
+    }
+
+    return 0;
+}
